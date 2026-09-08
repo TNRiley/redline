@@ -21,7 +21,7 @@ over a whole 40,000-token rule is both slow and unreadable.
     python3 src/diffs.py                 # build data/diffs.json
     python3 src/diffs.py --show 2016-00617
 """
-import argparse, difflib, json, os, re, sys, time
+import argparse, collections, difflib, json, os, re, sys, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 COHORT = os.path.join(HERE, "data", "cohort.json")
@@ -57,6 +57,9 @@ _BLOCK = re.compile(
     r"\*\s*\*\s*\*|Authority:|Source:|0\s+\d+\.)", re.I)
 
 MAX_PARAS = 4000      # beyond this a rule is diffed at paragraph level only
+# Combined word count above which the exact diff is replaced by multiset overlap.
+# 8,000 keeps the worst rule in the corpus under a second.
+WORD_DIFF_MAX = 8000
 
 _PART_HEAD = re.compile(r"^\s*PART\s+(\d+[A-Z]*)", re.M)
 # A proposal's regulatory text this short is a stub -- usually the List of Subjects
@@ -162,12 +165,18 @@ def _word_tally(a_paras, b_paras):
     here, and only genuinely new ones count as added.
     """
     wa, wb = words(" ".join(a_paras)), words(" ".join(b_paras))
-    # SequenceMatcher is quadratic in the worst case; past this size the region is a
-    # wholesale rewrite anyway and the exact split does not change the story.
-    if len(wa) + len(wb) > 60000:
-        return 0, len(wb), len(wa)
-    sm = difflib.SequenceMatcher(None, wa, wb, autojunk=False)
-    kept = sum(n for _, _, n in sm.get_matching_blocks())
+    # SequenceMatcher is quadratic, and on a big rule that is not a theoretical
+    # concern: a single 30,000-word replaced region ran for minutes, and a whole-corpus
+    # pass burned seventeen minutes of CPU without finishing. Past this size, fall
+    # back to multiset overlap -- how many word occurrences the two sides have in
+    # common, ignoring order. It is an approximation, and it is a *generous* one for
+    # "kept", so revision on the largest rewrites is if anything understated.
+    if len(wa) + len(wb) > WORD_DIFF_MAX:
+        common = collections.Counter(wa) & collections.Counter(wb)
+        kept = sum(common.values())
+    else:
+        sm = difflib.SequenceMatcher(None, wa, wb, autojunk=False)
+        kept = sum(n for _, _, n in sm.get_matching_blocks())
     return kept, len(wb) - kept, len(wa) - kept
 
 

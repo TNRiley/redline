@@ -38,7 +38,9 @@ UA = "redline/1.0 (+https://github.com/TNRiley/redline) research build"
 
 _PRE = re.compile(r"<pre>(.*)</pre>", re.S | re.I)
 _TAG = re.compile(r"<[^>]+>")
-BATCH = 400          # URLs per curl invocation; keeps the config file small
+BATCH = 120          # URLs per curl run. Small, because the host is rate-limited and
+                     # a batch only lands on disk when it finishes -- a big batch
+                     # means a stopped run throws away more work.
 SHUFFLE_SEED = 20260907
 
 
@@ -55,19 +57,28 @@ def pending(cohort):
     """Documents in the cohort with no file yet, de-duplicated: one proposal can be
     the parent of several finals.
 
-    Shuffled, with a fixed seed. This matters more than it looks: the cohort is
-    sorted by date, the rate limit means a run is often stopped part-way, and a
-    prefix of a date-sorted list is every rule from 2016 to 2019 and none after. A
-    seeded shuffle makes any partial fetch a random sample of the whole period
-    instead, and makes the same partial fetch reproducible."""
+    Shuffled by **pair**, with a fixed seed, and both sides of a pair are emitted
+    together. Two things depend on that and each was got wrong once:
+
+    * *Shuffled*, because the cohort is date-sorted and the rate limit means a run
+      gets stopped part-way -- a prefix of a date-sorted list is every rule from 2016
+      to 2019 and none after. A seeded shuffle makes any partial fetch a random
+      sample of the whole period, and a reproducible one.
+    * *By pair, not by document*, because a diff needs both sides. Shuffling the flat
+      list of documents scatters each pair's two halves across the whole queue, so a
+      part-finished run holds thousands of documents and very few complete pairs:
+      2,341 documents yielded 282 diffable rulemakings, a 12% yield. Keeping a pair
+      adjacent makes almost every fetched document count.
+    """
+    order = list(cohort)
+    random.Random(SHUFFLE_SEED).shuffle(order)
     seen, todo = set(), []
-    for p in cohort:
+    for p in order:
         for side in ("final", "proposed"):
             dn, url = p[side], p[side + "_text_url"]
             if url and dn not in seen and not os.path.exists(os.path.join(TEXT, dn + ".txt")):
                 seen.add(dn)
                 todo.append((dn, url))
-    random.Random(SHUFFLE_SEED).shuffle(todo)
     return todo
 
 

@@ -5,7 +5,7 @@
   "built": "2026-09-07",
   "published": false,
   "tagline": "Every federal rule, diffed against the version its agency first proposed — what public comment actually changed.",
-  "blurb": "American rulemaking promises that the public gets to comment and the agency may change its mind. Whether that second step moves the text is an empirical question nobody answers, because answering it means diffing two documents for every rule. This pairs each final rule in the Federal Register with the proposal it came from and compares the regulatory text word by word — the part that enters the Code of Federal Regulations, not the preamble around it. The median rule is enacted with about an eighth of its regulatory text new since it was proposed, and that median is the least interesting number on the page: the distribution is not a bell but a large mass of rules that barely move and a long tail that moves a great deal. Pairing is the hard part and has no field that does it — RIN, docket and CFR part each fail alone in ways that produce confident nonsense, and a routine-rule control cohort is carried throughout so the finding cannot be an artefact of only reading long rules.",
+  "blurb": "American rulemaking promises that the public gets to comment and the agency may change its mind. Whether that second step moves the text is an empirical question nobody answers, because answering it means diffing two documents for every rule. This pairs 13,626 final rules from the Federal Register with the proposals they came from and compares the regulatory text word by word — the part that enters the Code of Federal Regulations, not the preamble around it. The median rule is enacted with an eighth of its regulatory text new since it was proposed, and that median is the least interesting number on the page: the distribution is not a bell but a third of rules barely moving and a quarter arriving at least a quarter new. Agencies differ more than any of that suggests, from Energy at 28% median revision to Agriculture at 4%. Pairing is the hard part and no field does it — a RIN can be a standing class covering 4,346 documents, an FCC docket is a proceeding spanning years, and requiring CFR-part agreement threw out 8,582 candidate pairings that the other keys accepted. A routine-rule control cohort runs throughout, and the page is explicit that the gap between the strata has not been stable and should not be read as a result.",
   "tags": [
     "regulation",
     "federal register",
@@ -30,5 +30,5 @@
     "word-level diff over unwrapped paragraphs"
   ],
   "hasSource": true,
-  "bytes": 1587837
+  "bytes": 2979333
 }

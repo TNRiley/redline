@@ -11,8 +11,3 @@ openalex_*.json
 payload.json
 retractionwatch.csv
 node_modules/
-
-# Stray curl output. A backslash inside a curl -K config file is an escape
-# character, so a Windows path written literally lands as a mangled filename in
-# the working directory instead of the intended one.
-*.raw

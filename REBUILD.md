@@ -19,9 +19,21 @@ all and a long tail that moves a great deal. Roughly a quarter of diffed rules a
 quarter new; roughly a third barely move. An average over those two populations describes
 neither of them.
 
-The second finding is methodological and is why the control cohort exists: routine short rules
-revise *less* than substantive ones, so "rules change after comment" is not an artefact of
-only looking at long rules.
+The second finding is that agencies differ far more than the corpus median suggests — EPA,
+Transportation and HHS sit around 16–18% median revision while Commerce and Agriculture sit
+near 4%. That is a real spread and the most interesting thing on the page after the shape of
+the distribution. It is not evidence that the low agencies ignore comment: some of them
+publish narrow, well-settled rules that were never going to move.
+
+The control cohort is a *check*, not a finding. What it settles is that routine short rules
+revise too, so "rules change after comment" is not an artefact of only reading long rules.
+
+**Do not write up the gap between the two strata as a result**, in either direction. It was not
+stable while this corpus was built: at ~250 diffed rules the control sat slightly *above* the
+substantive median, at ~690 the two were within half a point, and at ~1,085 the control was
+several points *below*. The control is the smaller stratum by design and nothing here is
+powered to resolve a few points. If you extend the corpus, expect this number to move again,
+and resist the temptation to narrate whichever direction it lands in.
 
 ## Pipeline
 
@@ -102,7 +114,7 @@ direct final rules, corrections, rules issued without notice and comment, or rul
 proposal fell outside the harvest window. `C1-`/`C2-` prefixed documents are Federal Register
 *corrections* and are dropped before pairing.
 
-## Diffing, and three things that will silently ruin the numbers
+## Diffing, and five things that will silently ruin the numbers
 
 1. **Unwrap before comparing.** Federal Register text is hard-wrapped at ~72 characters.
    Insert one word in a paragraph's first sentence and every following line re-wraps, so a
@@ -125,6 +137,22 @@ proposal fell outside the harvest window. `C1-`/`C2-` prefixed documents are Fed
 The paragraph diff is kept for *display* — it is the unit a reader thinks in, and word-level
 opcodes are only computed inside paragraphs that line up one-to-one, because an intra-word
 diff of a wholesale rewrite is confetti.
+
+Two more that cost time:
+
+4. **`SequenceMatcher` is quadratic, and these documents are big enough for that to matter.**
+   A single 30,000-word replaced region runs for minutes; a whole-corpus pass burned seventeen
+   minutes of CPU without finishing and looked hung. Above `WORD_DIFF_MAX` combined words the
+   tally falls back to **multiset overlap** — how many word occurrences the two sides share,
+   ignoring order. That is an approximation, and deliberately a generous one for "kept", so
+   revision on the very largest rewrites is if anything understated rather than inflated.
+
+5. **Strip the page furniture.** `[[Page 51003]]` markers fall wherever the column break landed
+   in the printed Federal Register, so they differ between two printings of otherwise identical
+   text and register as real deletions. And re-join word tokens for display with something
+   better than `" ".join` — otherwise `2. Section 510.2 is amended by--` renders as
+   `2 . Section 510.2 is amended by - -`, which is the first thing a reader notices and makes
+   an accurate diff look broken.
 
 ## Scope: two populations, never blurred
 

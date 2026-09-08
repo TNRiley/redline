@@ -104,6 +104,16 @@ button.on{background:var(--accent);color:var(--bg);border-color:var(--accent)}
   color:var(--faint);margin:0 0 6px}
 .empty{padding:40px 22px;color:var(--faint);text-align:center;font-size:14px}
 
+/* agency chart */
+.agrow{display:grid;grid-template-columns:270px 1fr 116px;gap:12px;align-items:center;
+  padding:6px 4px;border-bottom:1px solid var(--rule2);cursor:pointer}
+.agrow:hover{background:var(--shade)}
+.agname{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.agtrack{height:11px;background:var(--rule2);border-radius:1px;overflow:hidden}
+.agtrack i{display:block;height:100%;background:var(--accent);opacity:.85}
+.agval{font:11.5px var(--mono);color:var(--mid);text-align:right}
+@media(max-width:720px){.agrow{grid-template-columns:1fr 90px}.agtrack{grid-column:1/-1}}
+
 /* position profile */
 .prof{display:flex;align-items:flex-end;gap:4px;height:110px;margin:6px 0 0}
 .prof div{flex:1;background:var(--accent);opacity:.8;border-radius:1px 1px 0 0;min-height:2px}
@@ -155,10 +165,23 @@ footer{padding:34px 0 60px;color:var(--faint);font-size:13px}
 <section>
   <h2>Where the new words land</h2>
   <p class="sub">Each rule's enacted text split into ten equal parts, and the new words counted
-     into whichever part they fall in. Averaged over every diffed rule. If comment changed rules
-     evenly throughout, this would be flat.</p>
+     into whichever part they fall in, averaged over every diffed rule. If revision were spread
+     evenly through a rule, this would be flat. It is not — the opening tenth takes the most.
+     <strong>Read that carefully:</strong> a rule opens with its amendatory instructions
+     (<em>“Section 510.2 is amended by revising paragraph (a)…”</em>), and adding one amendment
+     anywhere rewrites that list at the top. Some of the leading peak is instruction
+     bookkeeping rather than new obligation, and this chart cannot separate the two.</p>
   <div class="prof" id="prof"></div>
   <div class="proflab"><span>start of the regulation</span><span>end</span></div>
+</section>
+
+<section>
+  <h2>Which agencies rewrite</h2>
+  <p class="sub">Median revision by agency, for agencies with at least 25 diffed rules. The
+     spread is wider than the median of any one of them suggests — and an agency low on this
+     chart is not necessarily ignoring comment: some publish narrow, well-settled rules that
+     were never going to move.</p>
+  <div id="agchart"></div>
 </section>
 
 <section>
@@ -261,6 +284,7 @@ function render() {
   });
 
   profile();
+  agencyChart();
   methods();
   wire();
   apply();
@@ -280,6 +304,45 @@ function profile() {
     const d = el("div"); d.style.height = Math.max(2, 100 * v / mx) + "%";
     d.title = pct(v) + " of a rule's new words, on average, land in this tenth";
     host.append(d);
+  });
+}
+
+/* ---- agencies -------------------------------------------------------------- */
+function median(xs) {
+  const s = [...xs].sort((a, b) => a - b), n = s.length;
+  if (!n) return 0;
+  return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2;
+}
+
+function agencyChart() {
+  const by = new Map();
+  DATA.rules.forEach(r => {
+    if (!by.has(r.ag)) by.set(r.ag, []);
+    by.get(r.ag).push(r.rev);
+  });
+  const rows = [...by.entries()]
+    .filter(([, v]) => v.length >= 25)
+    .map(([a, v]) => ({ a, m: median(v), n: v.length }))
+    .sort((x, y) => y.m - x.m);
+  const host = $("#agchart");
+  if (!rows.length) { host.append(el("p", "sub", "Not enough diffed rules per agency yet.")); return; }
+  const mx = Math.max(...rows.map(r => r.m));
+  rows.forEach(r => {
+    const row = el("div", "agrow");
+    row.append(el("div", "agname", DATA.agencies[r.a]));
+    const track = el("div", "agtrack");
+    const fill = el("i");
+    fill.style.width = (100 * r.m / mx) + "%";
+    track.append(fill);
+    row.append(track);
+    row.append(el("div", "agval", pct(r.m) + "  n=" + r.n));
+    // Clicking an agency filters the list below rather than being decoration.
+    row.addEventListener("click", () => {
+      $("#ag").value = String(r.a);
+      SHOWN = 0; apply();
+      $("#list").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    host.append(row);
   });
 }
 
@@ -508,9 +571,23 @@ function methods() {
     + "about words comes from, and it is a <i>stratified sample, not a census</i>: rules of five "
     + "or more Federal Register pages in full, plus a random sample of the shorter routine ones "
     + "carried as a control. The control exists so that 'rules change after comment' cannot be "
-    + "an artefact of only looking at long rules — and it holds up: the routine control's median "
-    + "revision is " + pct(s.median_ctl) + " against " + pct(s.median_sub) + " for substantive "
-    + "rules (n=" + s.n_ctl.toLocaleString() + " and " + s.n_sub.toLocaleString() + ").</p>");
+    + "an artefact of only looking at long rules, and on that question it is decisive: routine "
+    + "rules revise too (median " + pct(s.median_ctl) + ", n=" + s.n_ctl.toLocaleString()
+    + "), against " + pct(s.median_sub) + " for substantive rules (n="
+    + s.n_sub.toLocaleString() + ").</p>"
+    + "<p><b>Do not read the gap between those two numbers as a result.</b> It has not been "
+    + "stable while this corpus was being built: at a few hundred diffed rules the two strata "
+    + "were within half a point of each other, and the control has sat both above and below the "
+    + "substantive median as the sample grew. The control cohort is a check that passed, not a "
+    + "measurement of how rule length affects revision — it is the smaller of the two strata by "
+    + "design, and nothing here is powered to resolve a few points between them.</p>"
+    + "<p><b>The cohort's size was set by a rate limit, not by a judgement about how much "
+    + "evidence is enough.</b> The Federal Register's full-text endpoint answers 429 under load; "
+    + "about sixty documents a minute is what it will sustain, and a rulemaking needs two. The "
+    + "documents are therefore fetched in a <i>seeded random order</i> across the whole "
+    + s.years[0] + "–" + s.years[1] + " period, so that stopping early yields a random sample "
+    + "rather than every rule up to some date. Re-running the pipeline for longer widens the "
+    + "cohort without changing anything else.</p>");
 
   d("The amendatory voice, and why it is normalised",
     "<p>A proposal says <i>we propose to amend</i>, <i>is proposed to be revised</i>, "
