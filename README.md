@@ -4,7 +4,7 @@
 
 → **[Open it](https://tnriley.github.io/redline/)**
 
-American rulemaking promises that the public gets to comment and the agency may change its mind. Whether that second step moves the text is an empirical question nobody answers, because answering it means diffing two documents for every rule. This pairs 13,626 final rules from the Federal Register with the proposals they came from and compares the regulatory text word by word — the part that enters the Code of Federal Regulations, not the preamble around it. The median rule is enacted with an eighth of its regulatory text new since it was proposed, and that median is the least interesting number on the page: the distribution is not a bell but a third of rules barely moving and a quarter arriving at least a quarter new. Agencies differ more than any of that suggests, from Energy at 28% median revision to Agriculture at 4%. Pairing is the hard part and no field does it — a RIN can be a standing class covering 4,346 documents, an FCC docket is a proceeding spanning years, and requiring CFR-part agreement threw out 8,582 candidate pairings that the other keys accepted. A routine-rule control cohort runs throughout, and the page is explicit that the gap between the strata has not been stable and should not be read as a result.
+American rulemaking promises that the public gets to comment and the agency may change its mind. Whether that second step moves the text is an empirical question nobody answers, because answering it means diffing two documents for every rule. This pairs 13,626 final rules from the Federal Register with the proposals they came from and diffs the regulatory text of 3,685 of them word by word — the part that enters the Code of Federal Regulations, not the preamble around it. The median rule is enacted with an eighth of its regulatory text new, and that median is the least interesting number on the page: a third of rules barely move and a quarter arrive at least a quarter new. Agencies differ tenfold, from the FCC above 50% to Agriculture near 5% — though neither end is a scoreboard, since an agency that reissues whole sections measures as heavily revised on identical substance. Pairing is the hard part and no field does it: a RIN can be a standing class covering 4,346 documents, an FCC docket is a proceeding spanning years, and requiring CFR-part agreement threw out 8,582 candidate pairings the other keys accepted. Routine short rules are carried as a control and revise too, at about 5%.
 
 ## Running it
 
@@ -30,7 +30,7 @@ Every figure on the page is computed from the data shipped with it. Check the pa
 
 ## Built with
 
-python 3 stdlib, curl for the rate-limited harvest, vanilla JS, gzip + DecompressionStream payload, canvas, word-level diff over unwrapped paragraphs.
+python 3 stdlib, curl for the rate-limited harvest, vanilla JS, gzip + DecompressionStream payload, canvas, word-level diff over unwrapped paragraphs, node smoke test that runs the built page.
 
 ## Licence
 

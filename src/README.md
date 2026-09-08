@@ -10,7 +10,7 @@ python3 cohort.py                          # choose what gets full text -> data/
 python3 fetch_text.py --parallel 8         # full text -> data/text/<document>.txt  (rate-limited)
 python3 diffs.py                           # word-level diffs -> data/diffs.json
 python3 metrics.py                         # print the corpus numbers; writes nothing
-python3 build_payload.py                   # splice payload into ../index.html
+python3 build_payload.py                   # payload -> ../index.html, gated on smoke.js
 ```
 
 `extract.py` is a library, not a step: it splits one Federal Register document into header,
@@ -27,7 +27,8 @@ summary, preamble, regulatory text, and the section where a final rule states wh
 | `extract.py` | document → parts; the `List of Subjects` boundary is what matters |
 | `diffs.py` | unwrap, normalise the amendatory voice, diff paragraphs then words |
 | `metrics.py` | the numbers, kept out of the page so they can be checked independently |
-| `build_payload.py` | columnar gzip payload + the reading set, spliced into the template |
+| `build_payload.py` | columnar gzip payload + the reading set; stages the page, runs `smoke.js`, and only then replaces `../index.html` |
+| `smoke.js` | runs the built page's script against a DOM shim and fails the build if it renders nothing |
 | `template.html` | the page. **Edit here — `../index.html` is generated.** |
 
 Everything under `data/` is generated and gitignored. `../REBUILD.md` is the full account,

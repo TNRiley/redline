@@ -19,21 +19,29 @@ all and a long tail that moves a great deal. Roughly a quarter of diffed rules a
 quarter new; roughly a third barely move. An average over those two populations describes
 neither of them.
 
-The second finding is that agencies differ far more than the corpus median suggests — EPA,
-Transportation and HHS sit around 16–18% median revision while Commerce and Agriculture sit
-near 4%. That is a real spread and the most interesting thing on the page after the shape of
-the distribution. It is not evidence that the low agencies ignore comment: some of them
-publish narrow, well-settled rules that were never going to move.
+The second finding is that agencies differ far more than the corpus median suggests — the FCC
+sits above 50% median revision, the financial regulators (CFTC, SEC) in the mid-20s, EPA and
+Energy near 18%, and Commerce and Agriculture near 5%. That is a tenfold spread and the most
+interesting thing on the page after the shape of the distribution.
 
-The control cohort is a *check*, not a finding. What it settles is that routine short rules
-revise too, so "rules change after comment" is not an artefact of only reading long rules.
+**Neither end of that chart is a scoreboard**, and the page says so. A low agency may publish
+narrow, well-settled rules that were never going to move. A high one may be responsive — or
+may just draft differently: an agency that reissues whole sections where another amends a
+single paragraph measures as heavily revised on identical substance. The FCC is the clearest
+suspect for that and is worth spot-checking through the redlines before anyone quotes its
+number.
 
-**Do not write up the gap between the two strata as a result**, in either direction. It was not
-stable while this corpus was built: at ~250 diffed rules the control sat slightly *above* the
-substantive median, at ~690 the two were within half a point, and at ~1,085 the control was
-several points *below*. The control is the smaller stratum by design and nothing here is
-powered to resolve a few points. If you extend the corpus, expect this number to move again,
-and resist the temptation to narrate whichever direction it lands in.
+The control cohort settles that routine short rules revise too — around 5% median, with an
+eighth of them still arriving at least a quarter new — so "rules change after comment" is not
+an artefact of only reading long rules. They also revise distinctly *less* than substantive
+ones (~12.5%).
+
+**That gap only became trustworthy at scale, and the intermediate readings were misleading.**
+At ~250 diffed rules the control sat slightly *above* the substantive median; at ~690 the two
+were within half a point; at ~1,085 the control was a few points below; at ~3,700 it separated
+cleanly. Anyone rebuilding this with a partial corpus will get a different answer and should
+not narrate it. Note also that the strata are split on *page count*, so "substantive rules are
+revised more" is close to a statement about length rather than about importance.
 
 ## Pipeline
 
@@ -44,10 +52,10 @@ order; all of them are re-runnable and the slow ones are resumable.
 python3 src/harvest.py --from 2016 --to 2026   # ~55k documents of metadata      (~6 min)
 python3 src/pair.py                            # -> data/pairs.json              (seconds)
 python3 src/cohort.py                          # -> data/cohort.json             (seconds)
-python3 src/fetch_text.py --parallel 8         # full texts, resumable, rate-limited (hours)
-python3 src/diffs.py                           # -> data/diffs.json              (~20 min)
+python3 src/fetch_text.py --parallel 8         # ~11.6k full texts, resumable   (~2.7 hours)
+python3 src/diffs.py                           # -> data/diffs.json         (~1.5 hours)
 python3 src/metrics.py                         # prints the numbers; writes nothing
-python3 src/build_payload.py                   # -> ../index.html
+python3 src/build_payload.py                   # -> ../index.html, gated on src/smoke.js
 ```
 
 On Windows use `python`, not `python3` — see the workspace's PUBLISHING.md §0b.
@@ -73,8 +81,9 @@ counts, and one of the better-designed government APIs. Its quirks, all of which
   was an order of magnitude slower. That looked exactly like a client-side performance
   problem, and the fetcher went through two rewrites — thread pools, then connection pooling,
   then curl — before anyone read the status code. It had been 429 all along. Roughly **8
-  concurrent transfers at ~60 documents a minute** is sustainable. The text cohort is sized to
-  what that allows in one session, not to what would be ideal.
+  concurrent transfers at ~60 documents a minute** is sustainable, and at that rate the whole
+  cohort — 9,278 documents — came down in 161 minutes with **zero** requests throttled. Budget
+  the time rather than trying to go faster; going faster is what produced the 429s.
 * **Fetch order must be shuffled.** The cohort is date-sorted and a throttled run gets stopped
   part-way, so a prefix is every rule from 2016 to 2019 and none after. `fetch_text.py`
   shuffles with a fixed seed, which makes a partial fetch a random sample of the whole period
@@ -172,7 +181,16 @@ The page must keep these apart. It does, and so should any change to it.
 The payload is gzipped, base64'd and inlined, and decompressed in the browser with
 `DecompressionStream` — 7.2 MB of JSON ships as 1.6 MB of text.
 
-Two things worth keeping:
+**The build is gated on a smoke test.** `build_payload.py` writes `index.html.staged`, runs
+`node src/smoke.js` against it, and only replaces `index.html` if the page actually rendered.
+A page that parses is not a page that runs: a script that dies partway still leaves the static
+header showing, so a broken build looks fine in a screenshot and is empty underneath. The shim
+in `smoke.js` is deliberately dumb — enough DOM for this page and nothing more. When it is
+missing something (`Option` and `classList` both had to be added), **widen the shim; never
+delete the check.** It has been negative-tested against a deliberately hoisted `var` and fails
+as it should.
+
+Two more things worth keeping:
 
 * **Remove the payload node after decoding.** A multi-megabyte base64 text node left in the
   document costs memory for the life of the page and measurably slows the renderer — Chrome's

@@ -16,7 +16,7 @@ costs more than the values do. Gzip hides some of that, but not the parse cost.
 
     python3 src/build_payload.py
 """
-import base64, datetime, gzip, io, json, os, random, re, statistics, sys
+import base64, datetime, gzip, io, json, os, random, re, shutil, statistics, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 D = os.path.join(HERE, "data")
@@ -147,6 +147,7 @@ def main():
         "median_ctl": round(statistics.median(ctl), 4) if ctl else None,
         "n_sub": len(sub), "n_ctl": len(ctl),
         "heavy": round(sum(1 for x in rev if x >= 0.25) / len(rev), 4),
+        "heavy_ctl": round(sum(1 for x in ctl if x >= 0.25) / len(ctl), 4) if ctl else None,
         "light": round(sum(1 for x in rev if x < 0.05) / len(rev), 4),
         "median_lag": statistics.median([x for x in pop["lag"] if x is not None]),
         "median_window": statistics.median([x for x in pop["window"] if x is not None]),
@@ -170,9 +171,33 @@ def main():
     tpl = open(TEMPLATE, encoding="utf-8").read()
     if "__PAYLOAD__" not in tpl:
         raise SystemExit("template.html has no __PAYLOAD__ marker")
+    if "<!DOCTYPE" not in tpl[:200].upper().replace("<!DOCTYPE", "<!DOCTYPE"):
+        raise SystemExit("template.html is not a whole document -- refusing to publish a "
+                         "fragment, which would render in quirks mode with UTF-8 read as "
+                         "Latin-1. Supply the wrapper; never bypass this.")
     html = tpl.replace("__PAYLOAD__", b64)
-    with open(OUT, "w", encoding="utf-8", newline="\n") as f:
+
+    # Stage the page, prove it runs, and only then move it into place. A page that
+    # parses is not a page that runs, and a script that dies partway still leaves the
+    # static header rendering -- so a broken build looks fine in a screenshot and is
+    # empty underneath. src/smoke.js executes the real script against the real payload.
+    staged = OUT + ".staged"
+    with open(staged, "w", encoding="utf-8", newline="\n") as f:
         f.write(html)
+    smoke = os.path.join(HERE, "smoke.js")
+    if shutil.which("node") and os.path.exists(smoke):
+        r = subprocess.run(["node", smoke, staged], capture_output=True, text=True)
+        out = ((r.stdout or "") + (r.stderr or "")).strip().splitlines()
+        print("   " + (out[-1] if out else "(smoke produced no output)"))
+        if r.returncode != 0:
+            os.remove(staged)
+            raise SystemExit(
+                "smoke test failed -- index.html left unchanged. Fix the page, or widen "
+                "the shim in src/smoke.js if it lacks something the page legitimately "
+                "uses. Do not delete the check.")
+    else:
+        print("   !! node not found -- page NOT smoke-tested")
+    os.replace(staged, OUT)
     print("-> %s (%.1f MB)" % (OUT, os.path.getsize(OUT) / 1e6))
 
 

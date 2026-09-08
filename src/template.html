@@ -178,9 +178,13 @@ footer{padding:34px 0 60px;color:var(--faint);font-size:13px}
 <section>
   <h2>Which agencies rewrite</h2>
   <p class="sub">Median revision by agency, for agencies with at least 25 diffed rules. The
-     spread is wider than the median of any one of them suggests — and an agency low on this
-     chart is not necessarily ignoring comment: some publish narrow, well-settled rules that
-     were never going to move.</p>
+     spread is far wider than the corpus median suggests — and <strong>neither end of it is a
+     scoreboard</strong>. An agency at the bottom may simply publish narrow, well-settled rules
+     that were never going to move. An agency at the top may be responsive, or may just draft
+     differently: an agency that reissues whole sections where another amends a single
+     paragraph will measure as heavily revised on identical substance. The FCC sits far above
+     everyone else and does exactly that. Click a row to read its rules and judge for
+     yourself — that is what the redlines are for.</p>
   <div id="agchart"></div>
 </section>
 
@@ -572,22 +576,23 @@ function methods() {
     + "or more Federal Register pages in full, plus a random sample of the shorter routine ones "
     + "carried as a control. The control exists so that 'rules change after comment' cannot be "
     + "an artefact of only looking at long rules, and on that question it is decisive: routine "
-    + "rules revise too (median " + pct(s.median_ctl) + ", n=" + s.n_ctl.toLocaleString()
-    + "), against " + pct(s.median_sub) + " for substantive rules (n="
-    + s.n_sub.toLocaleString() + ").</p>"
-    + "<p><b>Do not read the gap between those two numbers as a result.</b> It has not been "
-    + "stable while this corpus was being built: at a few hundred diffed rules the two strata "
-    + "were within half a point of each other, and the control has sat both above and below the "
-    + "substantive median as the sample grew. The control cohort is a check that passed, not a "
-    + "measurement of how rule length affects revision — it is the smaller of the two strata by "
-    + "design, and nothing here is powered to resolve a few points between them.</p>"
-    + "<p><b>The cohort's size was set by a rate limit, not by a judgement about how much "
-    + "evidence is enough.</b> The Federal Register's full-text endpoint answers 429 under load; "
-    + "about sixty documents a minute is what it will sustain, and a rulemaking needs two. The "
-    + "documents are therefore fetched in a <i>seeded random order</i> across the whole "
-    + s.years[0] + "–" + s.years[1] + " period, so that stopping early yields a random sample "
-    + "rather than every rule up to some date. Re-running the pipeline for longer widens the "
-    + "cohort without changing anything else.</p>");
+    + "rules revise too. Their median is " + pct(s.median_ctl) + " (n="
+    + s.n_ctl.toLocaleString() + ") against " + pct(s.median_sub) + " for substantive rules "
+    + "(n=" + s.n_sub.toLocaleString() + "), and " + pct(s.heavy_ctl) + " of them still come "
+    + "out at least a quarter new.</p>"
+    + "<p>So short routine rules move, and move less. A caution about that gap, from watching "
+    + "it: at a few hundred diffed rules the two strata were within half a point, and the "
+    + "control sat sometimes above and sometimes below. It only separated cleanly once the "
+    + "corpus passed a few thousand. Treat the direction as real and the exact size as soft — "
+    + "and note that the split is defined by page count, so 'substantive rules are revised "
+    + "more' is close to a statement about length, not about importance.</p>"
+    + "<p>The cohort's <i>boundary</i> — five Federal Register pages — was chosen; its "
+    + "<i>size</i> was set by what the publisher will serve. The Federal Register's full-text "
+    + "endpoint answers 429 under load and sustains about sixty documents a minute, and a "
+    + "rulemaking needs two of them. Documents are fetched in a seeded random order across the "
+    + "whole " + s.years[0] + "–" + s.years[1] + " period, so an interrupted run leaves a "
+    + "random sample rather than every rule up to some date. Lowering the page threshold and "
+    + "re-running widens the cohort without changing anything else.</p>");
 
   d("The amendatory voice, and why it is normalised",
     "<p>A proposal says <i>we propose to amend</i>, <i>is proposed to be revised</i>, "
