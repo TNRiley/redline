@@ -274,8 +274,8 @@ function render() {
     [pct(s.median_rev), "of the median rule's regulatory text is new since it was proposed"],
     [pct(s.heavy), "of diffed rules are at least a quarter new"],
     [pct(s.light), "barely moved — under 5% new"],
-    [s.median_window + " days", "median comment window the public was given"],
-    [s.median_lag + " days", "median wait from proposal to final rule"],
+    [s.median_window + " days", "median comment window, then a median "
+      + s.median_lag + " days to the final rule"],
   ]);
 
   const agSel = $("#ag");
