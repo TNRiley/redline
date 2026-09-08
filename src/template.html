@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Redline — what public comment actually changed</title>
+<style>
+:root{
+  --bg:#faf9f7; --panel:#fff; --ink:#16150f; --mid:#5d5a4e; --faint:#8b877a;
+  --rule:#e2ded2; --rule2:#efece3;
+  --add:#1f6f4a; --addbg:#dff0e4; --del:#a3372b; --delbg:#f7e0dc;
+  --accent:#7a4b1e; --shade:#f2efe6;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#14140f; --panel:#1c1c16; --ink:#eeead d; --ink:#eeeadd; --mid:#a8a496; --faint:#7d7a6d;
+  --rule:#33322a; --rule2:#26251e;
+  --add:#6fce9d; --addbg:#16351f; --del:#f09a8c; --delbg:#3a1d18;
+  --accent:#d9a66a; --shade:#211f19;
+}}
+:root[data-theme="dark"]{
+  --bg:#14140f; --panel:#1c1c16; --ink:#eeeadd; --mid:#a8a496; --faint:#7d7a6d;
+  --rule:#33322a; --rule2:#26251e;
+  --add:#6fce9d; --addbg:#16351f; --del:#f09a8c; --delbg:#3a1d18;
+  --accent:#d9a66a; --shade:#211f19;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+a{color:var(--accent)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+header{padding:56px 0 30px;border-bottom:1px solid var(--rule)}
+.crumb{font:12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;
+  color:var(--faint);margin-bottom:20px}
+.crumb a{color:var(--faint);text-decoration:none;border-bottom:1px solid var(--rule)}
+.crumb a:hover{color:var(--accent)}
+h1{font:600 46px/1.02 var(--serif);margin:0 0 10px;letter-spacing:-.02em}
+.tag{font:400 20px/1.4 var(--serif);color:var(--mid);max-width:44em;margin:0 0 22px}
+.lede{max-width:40em;color:var(--mid);font-size:15px}
+.lede strong{color:var(--ink)}
+
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:1px;
+  background:var(--rule);border:1px solid var(--rule);margin:30px 0 0}
+.fig{background:var(--panel);padding:15px 16px}
+.fig b{display:block;font:600 27px/1.05 var(--serif);letter-spacing:-.01em}
+.fig span{display:block;font-size:12.5px;color:var(--faint);margin-top:5px;line-height:1.35}
+
+section{padding:36px 0;border-bottom:1px solid var(--rule)}
+h2{font:600 13px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;
+  color:var(--faint);margin:0 0 16px}
+.sub{color:var(--mid);max-width:42em;margin:-6px 0 20px;font-size:14.5px}
+
+/* controls */
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px}
+select,input[type=search],button{font:13px var(--mono);color:var(--ink);
+  background:var(--panel);border:1px solid var(--rule);padding:7px 9px;border-radius:2px}
+input[type=search]{min-width:210px}
+button{cursor:pointer}
+button:hover{border-color:var(--accent);color:var(--accent)}
+button.on{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.count{font:12px var(--mono);color:var(--faint);margin-left:auto}
+
+/* distribution */
+#dist{width:100%;height:150px;display:block;cursor:crosshair}
+.axis{display:flex;justify-content:space-between;font:11px var(--mono);
+  color:var(--faint);margin-top:5px}
+
+/* list */
+.list{border-top:1px solid var(--rule)}
+.row{display:grid;grid-template-columns:70px 1fr 128px;gap:14px;align-items:baseline;
+  padding:11px 6px;border-bottom:1px solid var(--rule2);cursor:pointer}
+.row:hover{background:var(--shade)}
+.row.sel{background:var(--shade);box-shadow:inset 3px 0 0 var(--accent)}
+.row .d{font:11.5px var(--mono);color:var(--faint)}
+.row .t{font-size:14px;line-height:1.35}
+.row .t em{display:block;font-style:normal;font-size:12px;color:var(--faint);margin-top:3px}
+.meter{position:relative;height:7px;background:var(--rule2);border-radius:1px;overflow:hidden}
+.meter i{position:absolute;inset:0 auto 0 0;background:var(--accent);display:block}
+.pctn{font:11.5px var(--mono);color:var(--mid);text-align:right;margin-top:4px}
+.more{padding:14px;text-align:center}
+
+/* reader */
+#reader{background:var(--panel);border:1px solid var(--rule);padding:0;margin-top:8px}
+.rhead{padding:20px 22px;border-bottom:1px solid var(--rule)}
+.rhead h3{font:600 22px/1.25 var(--serif);margin:0 0 8px}
+.rmeta{font:12px var(--mono);color:var(--faint);line-height:1.7}
+.rmeta a{color:var(--accent)}
+.legend{display:flex;gap:14px;font:11.5px var(--mono);color:var(--faint);
+  padding:10px 22px;border-bottom:1px solid var(--rule);flex-wrap:wrap}
+.legend i{font-style:normal;padding:1px 5px;border-radius:2px}
+.ins{background:var(--addbg);color:var(--add)}
+.del{background:var(--delbg);color:var(--del);text-decoration:line-through}
+.doc{padding:6px 22px 24px;max-height:70vh;overflow-y:auto;font:14.5px/1.62 var(--serif)}
+.doc p{margin:11px 0;white-space:pre-wrap;word-wrap:break-word}
+.gap{margin:14px 0;padding:6px 0;border-top:1px dashed var(--rule);
+  border-bottom:1px dashed var(--rule);font:11.5px var(--mono);color:var(--faint);
+  text-align:center}
+.blk{margin:14px 0;padding-left:12px;border-left:2px solid var(--rule)}
+.blk.add{border-color:var(--add)}
+.blk.rem{border-color:var(--del)}
+.blk.chg{border-color:var(--accent)}
+.blk h4{font:11px var(--mono);letter-spacing:.08em;text-transform:uppercase;
+  color:var(--faint);margin:0 0 6px}
+.empty{padding:40px 22px;color:var(--faint);text-align:center;font-size:14px}
+
+/* position profile */
+.prof{display:flex;align-items:flex-end;gap:4px;height:110px;margin:6px 0 0}
+.prof div{flex:1;background:var(--accent);opacity:.8;border-radius:1px 1px 0 0;min-height:2px}
+.proflab{display:flex;justify-content:space-between;font:11px var(--mono);
+  color:var(--faint);margin-top:6px}
+
+/* methods */
+details{border-top:1px solid var(--rule2);padding:12px 0}
+summary{cursor:pointer;font:600 14px var(--serif)}
+details p,details li{color:var(--mid);font-size:14px;max-width:44em}
+code{font:12.5px var(--mono);background:var(--shade);padding:1px 4px;border-radius:2px}
+table{border-collapse:collapse;font-size:13.5px;margin:10px 0;width:100%;max-width:640px}
+th,td{text-align:left;padding:5px 10px 5px 0;border-bottom:1px solid var(--rule2);
+  vertical-align:top}
+th{font:11px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--faint)}
+footer{padding:34px 0 60px;color:var(--faint);font-size:13px}
+@media(max-width:720px){
+  h1{font-size:34px} .row{grid-template-columns:60px 1fr;gap:10px}
+  .row .m{grid-column:2} .doc{max-height:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="crumb"><a href="https://tnriley.github.io/quick-projects/">Quick Projects</a> / Redline</div>
+  <h1>Redline</h1>
+  <p class="tag">What public comment actually changed — every federal rule from
+     <span id="yr">2016</span> onward, lined up against the version its agency first proposed.</p>
+  <p class="lede">American rulemaking has a promise built into it: an agency publishes what it
+     intends to do, the public comments, and the agency may change its mind. Whether that
+     second step moves the text is an empirical question nobody answers, because answering it
+     means diffing two documents for every rule. This does that —
+     <strong id="l1">—</strong> rulemakings paired proposal-to-final, and the regulatory text of
+     <strong id="l2">—</strong> of them compared word by word. The median rule enters the Code of
+     Federal Regulations with <strong id="l3">—</strong> of its regulatory text new since the
+     proposal. Most of that is small. A quarter of it is not.</p>
+  <div class="figs" id="figs"></div>
+</header>
+
+<section>
+  <h2>The distribution</h2>
+  <p class="sub">Every diffed rulemaking, binned by how much of its enacted regulatory text was
+     not in the proposal. Drag across the chart to filter everything below; click once to clear.</p>
+  <canvas id="dist"></canvas>
+  <div class="axis"><span>0% — enacted as proposed</span><span>50%</span><span>100% — nothing survived</span></div>
+</section>
+
+<section>
+  <h2>Where the new words land</h2>
+  <p class="sub">Each rule's enacted text split into ten equal parts, and the new words counted
+     into whichever part they fall in. Averaged over every diffed rule. If comment changed rules
+     evenly throughout, this would be flat.</p>
+  <div class="prof" id="prof"></div>
+  <div class="proflab"><span>start of the regulation</span><span>end</span></div>
+</section>
+
+<section>
+  <h2>The rules</h2>
+  <div class="bar">
+    <input type="search" id="q" placeholder="search titles, agencies, CFR parts">
+    <select id="ag"><option value="">every agency</option></select>
+    <select id="st">
+      <option value="">both strata</option>
+      <option value="substantive">substantive only</option>
+      <option value="control">routine control only</option>
+    </select>
+    <select id="sort">
+      <option value="rev">most rewritten first</option>
+      <option value="rev-">least rewritten first</option>
+      <option value="fd-">newest first</option>
+      <option value="fd">oldest first</option>
+      <option value="wf-">longest rule first</option>
+    </select>
+    <button id="readable">readable here only</button>
+    <span class="count" id="count"></span>
+  </div>
+  <div class="list" id="list"></div>
+  <div class="more"><button id="mo">show more</button></div>
+</section>
+
+<section>
+  <h2>The redline</h2>
+  <p class="sub" id="rsub">Pick a rule above. Unchanged runs are collapsed — this is the
+     regulatory text only, not the preamble the agency wrote around it.</p>
+  <div id="reader"><div class="empty">No rule selected.</div></div>
+</section>
+
+<section>
+  <h2>Methods, and where this should not be pushed</h2>
+  <div id="methods"></div>
+</section>
+
+<footer>
+  <p>Built <span id="gen">—</span> from the Federal Register API (US National Archives / GPO),
+     a US Government work in the public domain. Nothing here is legal advice, and a diff is not
+     a legal analysis: the authoritative text of any rule is the one the Federal Register
+     publishes, linked from every row.</p>
+  <p><a href="https://github.com/TNRiley/redline">Source and rebuild instructions</a> ·
+     <a href="https://tnriley.github.io/quick-projects/">More Quick Projects</a></p>
+</footer>
+</div>
+
+<script id="payload" type="application/gzip-base64">__PAYLOAD__</script>
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const el = (t, c, x) => { const n = document.createElement(t); if (c) n.className = c;
+  if (x !== undefined) n.textContent = x; return n; };
+const pct = v => (100 * v).toFixed(v >= 0.1 ? 0 : 1) + "%";
+const esc = s => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+
+let DATA = null, VIEW = [], SHOWN = 0, SEL = null;
+let BRUSH = null;                       // [lo, hi] revision filter from the chart
+const PAGE = 60;
+
+/* ---- payload ---------------------------------------------------------------
+   Gzipped, base64'd and inlined so the page is one file. DecompressionStream is
+   the only reason this is affordable: the raw JSON is several times the size. */
+async function boot() {
+  const node = $("#payload");
+  const b64 = node.textContent.trim();
+  const bin = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  const ds = new DecompressionStream("gzip");
+  const buf = await new Response(new Blob([bin]).stream().pipeThrough(ds)).arrayBuffer();
+  DATA = JSON.parse(new TextDecoder().decode(buf));
+  // Drop the base64 once it is decoded. Leaving a multi-megabyte text node in the
+  // document costs real memory for the life of the page and makes the renderer
+  // noticeably slower -- screenshotting this page timed out until it was removed.
+  node.remove();
+  render();
+}
+
+function render() {
+  const s = DATA.stats;
+  $("#yr").textContent = s.years[0];
+  $("#gen").textContent = DATA.generated;
+  $("#l1").textContent = s.pairs.toLocaleString();
+  $("#l2").textContent = s.diffed.toLocaleString();
+  $("#l3").textContent = pct(s.median_rev);
+
+  figs([
+    [s.pairs.toLocaleString(), "rulemakings paired, proposal to final, " + s.years[0] + "–" + s.years[1]],
+    [s.diffed.toLocaleString(), "of them with both texts fetched and diffed word by word"],
+    [pct(s.median_rev), "of the median rule's regulatory text is new since it was proposed"],
+    [pct(s.heavy), "of diffed rules are at least a quarter new"],
+    [pct(s.light), "barely moved — under 5% new"],
+    [s.median_window + " days", "median comment window the public was given"],
+    [s.median_lag + " days", "median wait from proposal to final rule"],
+  ]);
+
+  const agSel = $("#ag");
+  DATA.agencies.forEach((a, i) => {
+    if (DATA.rules.some(r => r.ag === i)) agSel.append(new Option(a, i));
+  });
+
+  profile();
+  methods();
+  wire();
+  apply();
+  drawDist();
+}
+
+function figs(rows) {
+  const w = $("#figs");
+  rows.forEach(([b, s]) => {
+    const d = el("div", "fig"); d.append(el("b", null, b), el("span", null, s)); w.append(d);
+  });
+}
+
+function profile() {
+  const p = DATA.stats.posprofile, mx = Math.max(...p), host = $("#prof");
+  p.forEach(v => {
+    const d = el("div"); d.style.height = Math.max(2, 100 * v / mx) + "%";
+    d.title = pct(v) + " of a rule's new words, on average, land in this tenth";
+    host.append(d);
+  });
+}
+
+/* ---- distribution ---------------------------------------------------------- */
+function drawDist() {
+  const c = $("#dist"), dpr = devicePixelRatio || 1;
+  const w = c.clientWidth, h = 150;
+  c.width = w * dpr; c.height = h * dpr;
+  const g = c.getContext("2d"); g.scale(dpr, dpr); g.clearRect(0, 0, w, h);
+
+  const N = 50, bins = new Array(N).fill(0);
+  DATA.rules.forEach(r => bins[Math.min(N - 1, Math.floor(r.rev * N))]++);
+  const mx = Math.max(...bins), css = getComputedStyle(document.body);
+  const ink = css.getPropertyValue("--accent").trim();
+  const faint = css.getPropertyValue("--rule").trim();
+
+  for (let i = 0; i < N; i++) {
+    const x = i * w / N, bw = w / N - 1, bh = bins[i] / mx * (h - 26);
+    const lo = i / N, hi = (i + 1) / N;
+    const inB = !BRUSH || (hi > BRUSH[0] && lo < BRUSH[1]);
+    g.fillStyle = inB ? ink : faint;
+    g.globalAlpha = inB ? 0.85 : 0.5;
+    g.fillRect(x, h - 22 - bh, bw, bh);
+  }
+  g.globalAlpha = 1;
+  g.fillStyle = css.getPropertyValue("--faint").trim();
+  g.font = "11px ui-monospace,monospace";
+  const med = DATA.stats.median_rev;
+  const mx2 = med * w;
+  g.strokeStyle = css.getPropertyValue("--ink").trim();
+  g.setLineDash([3, 3]); g.globalAlpha = .55;
+  g.beginPath(); g.moveTo(mx2, 6); g.lineTo(mx2, h - 22); g.stroke();
+  g.setLineDash([]); g.globalAlpha = 1;
+  g.fillText("median " + pct(med), Math.min(w - 90, mx2 + 6), 14);
+}
+
+function brushSetup() {
+  const c = $("#dist");
+  let start = null;
+  const at = e => {
+    const r = c.getBoundingClientRect();
+    return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+  };
+  c.addEventListener("pointerdown", e => { start = at(e); c.setPointerCapture(e.pointerId); });
+  c.addEventListener("pointermove", e => {
+    if (start === null) return;
+    const a = at(e); BRUSH = [Math.min(start, a), Math.max(start, a)];
+    if (BRUSH[1] - BRUSH[0] > 0.005) { drawDist(); apply(); }
+  });
+  c.addEventListener("pointerup", e => {
+    const a = at(e);
+    if (start !== null && Math.abs(a - start) <= 0.005) { BRUSH = null; drawDist(); apply(); }
+    start = null;
+  });
+}
+
+/* ---- list ------------------------------------------------------------------ */
+function wire() {
+  ["#q", "#ag", "#st", "#sort"].forEach(s =>
+    $(s).addEventListener("input", () => { SHOWN = 0; apply(); }));
+  $("#readable").addEventListener("click", e => {
+    e.target.classList.toggle("on"); SHOWN = 0; apply();
+  });
+  $("#mo").addEventListener("click", () => { SHOWN += PAGE; paint(); });
+  addEventListener("resize", drawDist);
+  brushSetup();
+}
+
+function apply() {
+  const q = $("#q").value.toLowerCase().trim();
+  const ag = $("#ag").value, st = $("#st").value;
+  const onlyRead = $("#readable").classList.contains("on");
+  VIEW = DATA.rules.filter(r => {
+    if (BRUSH && (r.rev < BRUSH[0] || r.rev > BRUSH[1])) return false;
+    if (ag !== "" && r.ag !== +ag) return false;
+    if (st && r.st !== st) return false;
+    if (onlyRead && !DATA.red[r.f]) return false;
+    if (q) {
+      const hay = (r.t + " " + DATA.agencies[r.ag] + " " + (r.cfr || []).join(" ")).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  const [k, desc] = $("#sort").value.endsWith("-")
+    ? [$("#sort").value.slice(0, -1), false] : [$("#sort").value, true];
+  VIEW.sort((a, b) => (a[k] > b[k] ? 1 : a[k] < b[k] ? -1 : 0) * (desc ? -1 : 1));
+  SHOWN = Math.max(PAGE, Math.min(SHOWN, VIEW.length));
+  paint();
+}
+
+function paint() {
+  const host = $("#list"); host.textContent = "";
+  const n = Math.min(SHOWN || PAGE, VIEW.length);
+  $("#count").textContent = VIEW.length.toLocaleString() + " of "
+    + DATA.rules.length.toLocaleString() + " diffed rules"
+    + (BRUSH ? "  ·  " + pct(BRUSH[0]) + "–" + pct(BRUSH[1]) + " revised" : "");
+  for (let i = 0; i < n; i++) host.append(rowEl(VIEW[i]));
+  $("#mo").style.display = n < VIEW.length ? "" : "none";
+  $("#mo").textContent = "show more (" + (VIEW.length - n).toLocaleString() + " left)";
+}
+
+function rowEl(r) {
+  const row = el("div", "row" + (SEL === r.f ? " sel" : ""));
+  row.append(el("div", "d", r.fd));
+  const t = el("div", "t"); t.textContent = r.t || "(untitled)";
+  const sub = el("em"); sub.textContent = DATA.agencies[r.ag]
+    + (r.cfr && r.cfr.length ? "  ·  " + r.cfr.slice(0, 3).join(", ") : "")
+    + (r.st === "control" ? "  ·  routine control" : "")
+    + (DATA.red[r.f] ? "  ·  readable here" : "");
+  t.append(sub); row.append(t);
+  const m = el("div", "m");
+  const bar = el("div", "meter"); const fill = el("i");
+  fill.style.width = Math.max(1.5, r.rev * 100) + "%"; bar.append(fill);
+  const lab = el("div", "pctn", pct(r.rev) + " new");
+  m.append(bar, lab); row.append(m);
+  row.addEventListener("click", () => { SEL = r.f; open(r); paint(); });
+  return row;
+}
+
+/* ---- reader ---------------------------------------------------------------- */
+function open(r) {
+  const host = $("#reader"); host.textContent = "";
+  const head = el("div", "rhead");
+  head.append(el("h3", null, r.t || "(untitled)"));
+  const meta = el("div", "rmeta");
+  meta.innerHTML =
+    esc(DATA.agencies[r.ag]) + "<br>"
+    + "proposed " + r.pd + " &nbsp;→&nbsp; final " + r.fd
+    + (r.win !== null && r.win !== undefined ? " &nbsp;·&nbsp; " + r.win + "-day comment window" : "")
+    + "<br>" + pct(r.rev) + " of the enacted text is new · "
+    + r.wa.toLocaleString() + " words added, " + r.wr.toLocaleString() + " removed, "
+    + r.wf.toLocaleString() + " in the final"
+    + (r.cfr && r.cfr.length ? "<br>" + esc(r.cfr.join(" · ")) : "")
+    + "<br><a href='" + r.pu + "' target='_blank' rel='noopener'>the proposal on federalregister.gov</a>"
+    + " &nbsp;·&nbsp; <a href='" + r.fu + "' target='_blank' rel='noopener'>the final rule</a>";
+  head.append(meta); host.append(head);
+
+  const red = DATA.red[r.f];
+  if (!red) {
+    host.append(el("div", "empty",
+      "This rule's numbers are in the corpus, but its full redline is not one of the "
+      + Object.keys(DATA.red).length + " shipped with the page. Both texts are linked above."));
+    return;
+  }
+  const lg = el("div", "legend");
+  lg.innerHTML = "<span><i class='ins'>added</i> present in the final rule, not in the proposal</span>"
+    + "<span><i class='del'>struck</i> proposed, then dropped</span>"
+    + "<span>unchanged runs are collapsed</span>";
+  host.append(lg);
+
+  const doc = el("div", "doc");
+  red.b.forEach(b => {
+    if (b.t === "=") {
+      doc.append(el("div", "gap", b.n + " paragraph" + (b.n === 1 ? "" : "s") + " unchanged"));
+    } else if (b.t === "+") {
+      const k = el("div", "blk add"); k.append(el("h4", null, "added after comment"));
+      b.b.forEach(p => { const q = el("p"); q.innerHTML = "<span class='ins'>" + esc(p) + "</span>"; k.append(q); });
+      doc.append(k);
+    } else if (b.t === "-") {
+      const k = el("div", "blk rem"); k.append(el("h4", null, "proposed, then dropped"));
+      b.a.forEach(p => { const q = el("p"); q.innerHTML = "<span class='del'>" + esc(p) + "</span>"; k.append(q); });
+      doc.append(k);
+    } else {
+      const k = el("div", "blk chg"); k.append(el("h4", null, "rewritten"));
+      if (b.w) {
+        b.w.forEach(ops => {
+          const q = el("p");
+          q.innerHTML = ops.map(([t, s]) => t === "=" ? esc(s)
+            : t === "+" ? "<span class='ins'>" + esc(s) + "</span>"
+            : "<span class='del'>" + esc(s) + "</span>").join(" ");
+          k.append(q);
+        });
+      } else {
+        b.a.forEach(p => { const q = el("p"); q.innerHTML = "<span class='del'>" + esc(p) + "</span>"; k.append(q); });
+        b.b.forEach(p => { const q = el("p"); q.innerHTML = "<span class='ins'>" + esc(p) + "</span>"; k.append(q); });
+      }
+      doc.append(k);
+    }
+  });
+  if (red.more) doc.append(el("div", "gap", red.more + " further changed passages not shipped — see the full text, linked above"));
+  host.append(doc);
+  $("#rsub").textContent = "Regulatory text only. The preamble — where the agency explains itself and answers comments — is not diffed here.";
+  host.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+/* ---- methods --------------------------------------------------------------- */
+function methods() {
+  const s = DATA.stats, m = $("#methods");
+  const d = (q, html) => { const x = el("details");
+    x.append(el("summary", null, q)); const b = el("div"); b.innerHTML = html; x.append(b); m.append(x); };
+
+  d("What is being measured?",
+    "<p><b>Revision</b> is the share of the words in a rule's enacted <i>regulatory text</i> that "
+    + "were not in the proposal's regulatory text. It is a text measure, not a legal one: a "
+    + "one-word change to a threshold can matter more than a thousand words of reorganisation, "
+    + "and this number cannot tell them apart.</p>"
+    + "<p>Only the amendatory text is compared — the part that enters the Code of Federal "
+    + "Regulations. The preamble, where an agency summarises comments and explains itself, is "
+    + "excluded. It is much longer than the rule and is a different kind of document.</p>");
+
+  d("How is a proposal matched to its final rule?",
+    "<p>Three keys, none of which works alone.</p><table>"
+    + "<tr><th>key</th><th>why it is not enough</th></tr>"
+    + "<tr><td>RIN</td><td>Some agencies run a standing RIN for a whole class of routine "
+    + "actions. <code>1625-AA00</code>, Coast Guard safety zones, carries 4,346 documents. "
+    + "Those RINs are detected by volume and excluded from RIN matching.</td></tr>"
+    + "<tr><td>Docket</td><td>Unique per action inside a standing RIN, but an FCC or FAR docket "
+    + "is a <i>proceeding</i> — dozens of unrelated rules over years.</td></tr>"
+    + "<tr><td>CFR part</td><td>Both sides must amend the same part of the CFR. This rejected "
+    + "8,582 candidate pairings that the first two keys accepted.</td></tr></table>"
+    + "<p>A final rule pairs with the nearest preceding proposal that passes all three. "
+    + "Two further checks run against the text itself, and " + s.suspect.toLocaleString()
+    + " pairs that failed them are excluded from every number here: the two sides must amend "
+    + "the same <code>PART</code> in their actual amendatory text, and neither side may be more "
+    + "than four times the other — agencies publish companion documents on the same day, and "
+    + "the smaller one gets mistaken for the parent.</p>"
+    + "<p><b>40% of final rules pair at all.</b> The rest are direct final rules, corrections, "
+    + "rules issued without notice and comment, or rulemakings whose proposal fell outside the "
+    + "window. Nothing here is a claim about those.</p>");
+
+  d("What is in the corpus, and what is only in the sample?",
+    "<p>Two scopes, and they are not the same population.</p>"
+    + "<p><b>Every paired rulemaking</b> (" + s.pairs.toLocaleString() + ") contributes the "
+    + "metadata figures: comment window, time to final, page counts.</p>"
+    + "<p><b>The diffed cohort</b> (" + s.diffed.toLocaleString() + ") is where every claim "
+    + "about words comes from, and it is a <i>stratified sample, not a census</i>: rules of five "
+    + "or more Federal Register pages in full, plus a random sample of the shorter routine ones "
+    + "carried as a control. The control exists so that 'rules change after comment' cannot be "
+    + "an artefact of only looking at long rules — and it holds up: the routine control's median "
+    + "revision is " + pct(s.median_ctl) + " against " + pct(s.median_sub) + " for substantive "
+    + "rules (n=" + s.n_ctl.toLocaleString() + " and " + s.n_sub.toLocaleString() + ").</p>");
+
+  d("The amendatory voice, and why it is normalised",
+    "<p>A proposal says <i>we propose to amend</i>, <i>is proposed to be revised</i>, "
+    + "<i>would be added</i>. The final says <i>we amend</i>, <i>is revised</i>, <i>is added</i>. "
+    + "Same instruction, different grammatical mood. Left alone, every rule in the corpus looks "
+    + "partly rewritten for reasons that have nothing to do with public comment. Nine "
+    + "substitutions are applied to both sides before diffing; they are listed in "
+    + "<code>src/diffs.py</code> and are the only text normalisation performed.</p>"
+    + "<p>Federal Register text is also hard-wrapped at about 72 characters, so inserting one "
+    + "word re-wraps every following line. Everything is unwrapped to logical paragraphs first, "
+    + "or a line diff would report whole paragraphs as changed.</p>");
+
+  d("Why the median is not the story",
+    "<p>Half of rules change by less than " + pct(s.median_rev) + ", which sounds like comment "
+    + "does little. But " + pct(s.heavy) + " of diffed rules are at least a quarter new, and "
+    + pct(s.light) + " barely move at all. The distribution is not a bell around the median — it "
+    + "is a large group that barely changes and a real tail that changes a great deal. An average "
+    + "over the two describes neither.</p>"
+    + "<p>And a diff cannot tell you <i>why</i> text changed. Agencies revise in response to "
+    + "comments, but also to internal review, litigation risk, OMB, and their own second "
+    + "thoughts. This measures that the text moved, not who moved it.</p>");
+
+  d("Known limits",
+    "<p>Pairing is heuristic and some pairs are certainly still wrong; the checks above catch "
+    + "the failure modes that were found, not the ones that were not. Documents whose amendatory "
+    + "text this extractor could not locate are skipped rather than counted as unchanged — "
+    + "roughly a quarter of documents amend nothing, or amend in a form the <code>PART</code> "
+    + "heuristic misses. Only " + Object.keys(DATA.red).length + " full redlines ship with the "
+    + "page, sampled across the whole revision range rather than skimmed off the top; every "
+    + "other rule links to the Federal Register's own text. And the corpus starts in "
+    + s.years[0] + " because that is where the harvest was set to begin, not because anything "
+    + "changed that year.</p>");
+}
+
+boot().catch(e => {
+  document.body.insertAdjacentHTML("afterbegin",
+    "<div style='padding:20px;font-family:monospace'>Payload failed to load: " + e + "</div>");
+});
+</script>
+</body>
+</html>

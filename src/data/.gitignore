@@ -1,0 +1,6 @@
+# The raw harvest: ~60 MB of Federal Register metadata, ~12,000 full document texts
+# (several hundred MB), and the intermediates derived from them. Every byte of it is
+# refetched and rebuilt by the scripts in ../ -- see ../../REBUILD.md. This file is
+# the only thing here that is tracked.
+*
+!.gitignore
